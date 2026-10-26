@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mi Tienda</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin: .5rem 0; }
+    #estado { font-size: .9rem; color: #555; }
+  </style>
+</head>
+<body>
+  <h1>Productos</h1>
+  <p id="estado">Conectando con el backend...</p>
+  <div id="lista"></div>
+
+  <script>
+    const API = "http://127.0.0.1:8000";
+
+    async function cargar() {
+      const estado = document.getElementById("estado");
+      try {
+        const h = await (await fetch(`${API}/health`)).json();
+        estado.textContent = `API: ${h.api} | MongoDB: ${h.mongodb}`;
+
+        const productos = await (await fetch(`${API}/productos/`)).json();
+        document.getElementById("lista").innerHTML = productos.length
+          ? productos.map(p => `<div class="card"><b>${p.nombre}</b><br>$${p.precio} · stock: ${p.stock}</div>`).join("")
+          : "<p>No hay productos todavía.</p>";
+      } catch (e) {
+        estado.textContent = "No se pudo conectar con el backend. ¿Está corriendo uvicorn?";
+      }
+    }
+    cargar();
+  </script>
+</body>
+</html>
