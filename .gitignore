@@ -6,3 +6,7 @@ __pycache__/
 .vscode/
 .idea/
 .DS_Store
+.venv/
+.venv-django/
+__pycache__/
+db.sqlite3
