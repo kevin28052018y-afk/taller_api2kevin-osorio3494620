@@ -2,64 +2,66 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-# Conexión interna de tu base de datos
 from app.db import mongodb
-# Importación de ambos routers (Productos y Pedidos)
-from app.routers import producto, pedido
+from app.routers import pedido, producto
+
+# En producción reemplaza "*" por la URL de tu frontend, por ejemplo:
+# ["https://mi-frontend.onrender.com"]
+ORIGENES_PERMITIDOS = ["*"]
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Evento de inicio del servidor: Conecta a MongoDB Atlas
+    # Inicio: conecta a MongoDB Atlas
     await mongodb.connect_to_mongo()
     yield
-    # Evento de apagado del servidor: Cierra la conexión de forma segura
+    # Apagado: cierra la conexión de forma segura
     await mongodb.close_mongo_connection()
 
 
-# Inicialización de FastAPI con metadatos para la documentación de Swagger
 app = FastAPI(
-    title="Mi FastAPI Project", 
-    version="0.1.0", 
-    description="API 100% funcional con CRUD de Productos y Gestión de Pedidos",
-    lifespan=lifespan
+    title="Mi FastAPI Project",
+    version="0.1.0",
+    description="API con CRUD de Productos y gestión de Pedidos",
+    lifespan=lifespan,
 )
 
-# Configuración de Middlewares (CORS) para permitir la comunicación con el Frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción en Render, puedes limitarlo a la URL de tu frontend
-    allow_credentials=True,
+    allow_origins=ORIGENES_PERMITIDOS,
+    allow_credentials=False,  # No usas cookies; con "*" debe ir en False
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Inclusión de los Routers en la aplicación central
 app.include_router(producto.router)
 app.include_router(pedido.router)
 
 
 @app.get("/", tags=["General"])
 async def raiz():
-    """
-    Endpoint raíz para verificar de forma rápida que la API responda en la Web.
-    """
+    """Verifica rápidamente que la API responde."""
     return {
         "mensaje": "API funcionando exitosamente 🚀",
-        "documentacion": "/docs"
+        "documentacion": "/docs",
     }
 
 
 @app.get("/health", tags=["General"])
 async def health():
     """
-    Endpoint de monitoreo (Health Check) útil para plataformas como Render.
-    Verifica la salud de la API y realiza un ping de conectividad a MongoDB Atlas.
+    Health check para Render u otros monitores.
+    Responde 200 si la API y MongoDB funcionan, 503 si MongoDB no responde.
     """
     try:
-        # Intenta hacer un ping administrativo a la base de datos
+        if mongodb.client is None:
+            raise RuntimeError("Sin conexión inicializada")
         await mongodb.client.admin.command("ping")
         return {"api": "ok", "mongodb": "ok"}
-    except Exception as e:
-        return {"api": "ok", "mongodb": f"error de conexión: {str(e)}"}
+    except Exception:
+        return JSONResponse(
+            status_code=503,
+            content={"api": "ok", "mongodb": "error de conexión"},
+        )

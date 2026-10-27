@@ -30,5 +30,4 @@ class ProductoUpdate(BaseModel):
 class ProductoResponse(ProductoBase):
     id: PyObjectId = Field(alias="_id")
 
-    # Configuración requerida en Pydantic v2 para serializar correctamente los alias de MongoDB (_id)
     model_config = ConfigDict(populate_by_name=True)
