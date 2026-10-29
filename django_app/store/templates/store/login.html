@@ -1,0 +1,27 @@
+{% extends "store/base.html" %}
+{% block title %}Iniciar sesión · Mi Tienda{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5 col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h3 class="mb-1">Iniciar sesión</h3>
+        <p class="text-muted">Entra para ver el catálogo.</p>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="email" class="form-label">Correo</label>
+            <input type="email" class="form-control" id="email" name="email" value="{{ email|default:'' }}" placeholder="juan@example.com" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Contraseña</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+          </div>
+          <button class="btn btn-primary w-100" type="submit">Entrar</button>
+        </form>
+        <p class="text-center mt-3 mb-0 small">¿No tienes cuenta? <a href="{% url 'registro' %}">Regístrate</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
