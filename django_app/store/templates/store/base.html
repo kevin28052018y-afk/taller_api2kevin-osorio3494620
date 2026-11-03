@@ -19,6 +19,7 @@
       {% if request.session.usuario %}
         <span class="text-light small">
           Hola, {{ request.session.usuario.full_name|default:request.session.usuario.username }}
+          <span class="badge text-bg-info">{{ request.session.usuario.rol|default:"usuario"|capfirst }}</span>
         </span>
         <form method="post" action="{% url 'logout' %}" class="m-0">
           {% csrf_token %}

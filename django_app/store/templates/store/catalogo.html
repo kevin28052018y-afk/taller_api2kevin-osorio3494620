@@ -14,7 +14,7 @@
     <button class="btn btn-outline-primary" type="submit">Buscar</button>
   </form>
 </div>
-
+ 
 <div class="row g-3">
   {% for p in productos %}
     <div class="col-sm-6 col-lg-4 col-xl-3">
@@ -32,6 +32,13 @@
               <span class="badge text-bg-danger">Agotado</span>
             {% endif %}
           </div>
+          <form method="post" action="{% url 'pedido' p.id %}" class="mt-3">
+            {% csrf_token %}
+            <input type="hidden" name="cantidad" value="1">
+            <button class="btn btn-sm btn-primary w-100" type="submit" {% if p.stock <= 0 %}disabled{% endif %}>
+              {% if request.session.usuario %}Pedir{% else %}Inicia sesión para pedir{% endif %}
+            </button>
+          </form>
         </div>
       </div>
     </div>

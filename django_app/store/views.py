@@ -4,7 +4,11 @@ import requests
 from django.conf import settings
 from django.contrib import messages
 from django.shortcuts import redirect, render
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.decorators.http import require_POST
+
+ROLES = {"usuario": "Usuario", "administrador": "Administrador"}
 
 TIMEOUT = 8  # segundos de espera máxima por la API
 
@@ -31,15 +35,30 @@ def login_requerido(vista):
     @wraps(vista)
     def envoltura(request, *args, **kwargs):
         if not request.session.get("token"):
-            messages.warning(request, "Inicia sesión para ver el catálogo.")
-            return redirect("login")
+            if request.method == "POST":
+                messages.warning(request, "Inicia sesión para hacer tu pedido y vuelve a pulsar «Pedir».")
+                return redirect("login")
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect(f"{reverse('login')}?{urlencode({'next': request.get_full_path()})}")
         return vista(request, *args, **kwargs)
     return envoltura
 
 
+def destino_seguro(request):
+    """Devuelve la página a la que volver tras el login (solo rutas de este sitio)."""
+    destino = request.POST.get("next") or request.GET.get("next")
+    if destino and url_has_allowed_host_and_scheme(
+        destino, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return destino
+    return reverse("catalogo")
+
+
 def login_view(request):
     if request.session.get("token"):
-        return redirect("catalogo")
+        return redirect(destino_seguro(request))
+
+    siguiente = request.POST.get("next") or request.GET.get("next") or ""
 
     if request.method == "POST":
         email = request.POST.get("email", "").strip()
@@ -48,7 +67,7 @@ def login_view(request):
             r = llamar_api("post", "/usuarios/login", json={"email": email, "password": password})
         except requests.RequestException:
             messages.error(request, "No se pudo conectar con la API. ¿Está corriendo uvicorn?")
-            return render(request, "store/login.html", {"email": email})
+            return render(request, "store/login.html", {"email": email, "next": siguiente})
 
         if r.status_code == 200:
             datos = r.json()
@@ -58,16 +77,17 @@ def login_view(request):
                 "username": datos["usuario"]["username"],
                 "email": datos["usuario"]["email"],
                 "full_name": datos["usuario"].get("full_name"),
+                "rol": datos["usuario"].get("rol", "usuario"),
             }
-            return redirect("catalogo")
+            return redirect(destino_seguro(request))
 
         if r.status_code == 422:
             messages.error(request, "Revisa el formato del correo.")
         else:
             messages.error(request, detalle_error(r, "No se pudo iniciar sesión."))
-        return render(request, "store/login.html", {"email": email})
+        return render(request, "store/login.html", {"email": email, "next": siguiente})
 
-    return render(request, "store/login.html")
+    return render(request, "store/login.html", {"next": siguiente})
 
 
 def registro(request):
@@ -79,12 +99,17 @@ def registro(request):
             "username": request.POST.get("username", "").strip(),
             "email": request.POST.get("email", "").strip(),
             "full_name": request.POST.get("full_name", "").strip(),
+            "rol": request.POST.get("rol", "usuario"),
         }
         password = request.POST.get("password", "")
 
+        if form["rol"] not in ROLES:
+            messages.error(request, "Elige un rol válido.")
+            return render(request, "store/registro.html", {"form": form, "roles": ROLES})
+
         if password != request.POST.get("password2", ""):
             messages.error(request, "Las contraseñas no coinciden.")
-            return render(request, "store/registro.html", {"form": form})
+            return render(request, "store/registro.html", {"form": form, "roles": ROLES})
 
         payload = {**form, "password": password}
         if not payload["full_name"]:
@@ -93,7 +118,7 @@ def registro(request):
             r = llamar_api("post", "/usuarios/", json=payload)
         except requests.RequestException:
             messages.error(request, "No se pudo conectar con la API. ¿Está corriendo uvicorn?")
-            return render(request, "store/registro.html", {"form": form})
+            return render(request, "store/registro.html", {"form": form, "roles": ROLES})
 
         if r.status_code == 201:
             messages.success(request, "Cuenta creada. Ya puedes iniciar sesión.")
@@ -107,9 +132,9 @@ def registro(request):
             )
         else:
             messages.error(request, detalle_error(r, "No se pudo crear la cuenta."))
-        return render(request, "store/registro.html", {"form": form})
+        return render(request, "store/registro.html", {"form": form, "roles": ROLES})
 
-    return render(request, "store/registro.html")
+    return render(request, "store/registro.html", {"form": {"rol": "usuario"}, "roles": ROLES})
 
 
 @require_POST
@@ -119,17 +144,16 @@ def logout_view(request):
     return redirect("login")
 
 
-@login_requerido
 def catalogo(request):
-    token = request.session["token"]
+    # El catálogo es público. Si hay sesión, solo comprobamos que el JWT siga vigente.
+    token = request.session.get("token")
 
     try:
-        # Verifica que el JWT siga siendo válido (firma y expiración las revisa la API)
-        me = llamar_api("get", "/usuarios/me", token=token)
-        if me.status_code == 401:
-            request.session.flush()
-            messages.warning(request, "Tu sesión expiró. Inicia sesión de nuevo.")
-            return redirect("login")
+        if token:
+            me = llamar_api("get", "/usuarios/me", token=token)
+            if me.status_code == 401:
+                request.session.flush()
+                messages.warning(request, "Tu sesión expiró. Inicia sesión de nuevo para hacer pedidos.")
 
         r = llamar_api("get", "/productos/")
         r.raise_for_status()
@@ -159,3 +183,32 @@ def catalogo(request):
         "q": q,
         "categoria": categoria,
     })
+
+
+@require_POST
+@login_requerido
+def pedido(request, producto_id):
+    """Crea un pedido. Solo para usuarios con sesión iniciada."""
+    token = request.session["token"]
+    try:
+        cantidad = max(1, int(request.POST.get("cantidad", 1)))
+    except ValueError:
+        cantidad = 1
+
+    try:
+        # OJO: ajusta la ruta y el JSON a lo que espere tu API FastAPI
+        r = llamar_api("post", "/pedidos/", token=token,
+                       json={"producto_id": producto_id, "cantidad": cantidad})
+    except requests.RequestException:
+        messages.error(request, "No se pudo conectar con la API.")
+        return redirect("catalogo")
+
+    if r.status_code in (200, 201):
+        messages.success(request, "¡Pedido realizado!")
+    elif r.status_code == 401:
+        request.session.flush()
+        messages.warning(request, "Tu sesión expiró. Inicia sesión de nuevo.")
+        return redirect("login")
+    else:
+        messages.error(request, detalle_error(r, "No se pudo crear el pedido."))
+    return redirect("catalogo")
