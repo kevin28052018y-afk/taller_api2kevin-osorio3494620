@@ -136,3 +136,14 @@ API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000").rstrip("/")
 # La sesión (donde se guarda el JWT) dura lo mismo que el token: 1 hora
 SESSION_COOKIE_AGE = 60 * 60
 SESSION_COOKIE_HTTPONLY = True
+DEBUG = os.environ.get("DEBUG", "False") == "True"
+
+SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-solo-para-desarrollo")
+
+ALLOWED_HOSTS = [".vercel.app", "localhost", "127.0.0.1"]
+CSRF_TRUSTED_ORIGINS = ["https://*.vercel.app"]
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Sesiones en cookie firmada (Vercel no permite escribir en SQLite)
+SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
+SESSION_COOKIE_SECURE = not DEBUG
