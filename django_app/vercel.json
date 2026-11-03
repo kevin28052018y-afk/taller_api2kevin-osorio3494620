@@ -2,14 +2,14 @@
     "version": 2,
     "builds": [
         {
-            "src": "techgear_web/wsgi.py",
+            "src": "config/wsgi.py",
             "use": "@vercel/python"
     }
 ],
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "techgear_web/wsgi.py"
+            "dest": "config/wsgi.py"
         }
     ]
 }
