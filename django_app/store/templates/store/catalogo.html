@@ -1,33 +1,65 @@
 {% extends "store/base.html" %}
-{% block title %}Catálogo · Mi Tienda{% endblock %}
+{% block title %}Catálogo · Sport Zone{% endblock %}
 {% block content %}
+
+<style>
+  .hero-deportes {
+    background: linear-gradient(135deg, var(--sport-navy) 0%, var(--sport-green-dark) 100%);
+    color: #fff;
+    border-radius: 1rem;
+    border-bottom: 5px solid var(--sport-orange);
+  }
+  .hero-deportes h1 { font-size: 2.6rem; }
+  .producto-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(11,31,51,.25); }
+  .producto-img { height: 180px; font-size: 4rem; background: #e3f4ea; }
+  .badge.text-bg-success { background-color: var(--sport-green) !important; color: #04210f !important; }
+  .precio { font-family: 'Oswald', sans-serif; color: var(--sport-navy); }
+</style>
+
+<div class="hero-deportes p-4 p-md-5 mb-4">
+  <h1 class="fw-bold mb-1">⚽ Sport Zone 🏀</h1>
+  <p class="mb-0 lead">Todo el equipo que necesitas para tu deporte favorito.</p>
+</div>
+
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-  <h2 class="mb-0">Catálogo</h2>
+  <h2 class="mb-0">Artículos deportivos</h2>
   <form method="get" class="d-flex gap-2">
-    <input type="search" name="q" value="{{ q|default:'' }}" class="form-control" placeholder="Buscar producto...">
+    <input type="search" name="q" value="{{ q|default:'' }}" class="form-control" placeholder="Buscar balón, guayos, camiseta...">
     <select name="categoria" class="form-select" onchange="this.form.submit()">
-      <option value="">Todas las categorías</option>
+      <option value="">Todos los deportes</option>
       {% for c in categorias %}
         <option value="{{ c }}" {% if c == categoria %}selected{% endif %}>{{ c }}</option>
       {% endfor %}
     </select>
-    <button class="btn btn-outline-primary" type="submit">Buscar</button>
+    <button class="btn btn-primary" type="submit">Buscar</button>
   </form>
 </div>
- 
+
 <div class="row g-3">
   {% for p in productos %}
     <div class="col-sm-6 col-lg-4 col-xl-3">
       <div class="card producto-card h-100">
-        <div class="producto-img d-flex align-items-center justify-content-center rounded-top">📦</div>
+        {% if p.imagen_url %}
+          <img src="{{ p.imagen_url }}" alt="{{ p.nombre }}" class="card-img-top" style="height:180px; object-fit:cover;">
+        {% else %}
+          <div class="producto-img d-flex align-items-center justify-content-center rounded-top">
+            {% if p.categoria|lower == "fútbol" or p.categoria|lower == "futbol" %}⚽
+            {% elif p.categoria|lower == "baloncesto" %}🏀
+            {% elif p.categoria|lower == "ciclismo" %}🚴
+            {% elif p.categoria|lower == "natación" or p.categoria|lower == "natacion" %}🏊
+            {% elif p.categoria|lower == "tenis" %}🎾
+            {% elif p.categoria|lower == "running" %}🏃
+            {% else %}🏅{% endif %}
+          </div>
+        {% endif %}
         <div class="card-body d-flex flex-column">
-          {% if p.categoria %}<span class="badge text-bg-secondary align-self-start mb-2">{{ p.categoria }}</span>{% endif %}
+          {% if p.categoria %}<span class="badge text-bg-success align-self-start mb-2">{{ p.categoria }}</span>{% endif %}
           <h5 class="card-title">{{ p.nombre }}</h5>
           <p class="card-text text-muted small flex-grow-1">{{ p.descripcion|default:"Sin descripción" }}</p>
           <div class="d-flex justify-content-between align-items-center">
-            <strong class="fs-5">${{ p.precio }}</strong>
+            <strong class="fs-4 precio">${{ p.precio }}</strong>
             {% if p.stock > 0 %}
-              <span class="badge text-bg-success">Stock: {{ p.stock }}</span>
+              <span class="badge text-bg-success">Disponibles: {{ p.stock }}</span>
             {% else %}
               <span class="badge text-bg-danger">Agotado</span>
             {% endif %}
@@ -36,7 +68,7 @@
             {% csrf_token %}
             <input type="hidden" name="cantidad" value="1">
             <button class="btn btn-sm btn-primary w-100" type="submit" {% if p.stock <= 0 %}disabled{% endif %}>
-              {% if request.session.usuario %}Pedir{% else %}Inicia sesión para pedir{% endif %}
+              {% if request.session.usuario %}🛒 Comprar{% else %}Inicia sesión para comprar{% endif %}
             </button>
           </form>
         </div>
@@ -44,7 +76,7 @@
     </div>
   {% empty %}
     <div class="col-12">
-      <div class="alert alert-info mb-0">No hay productos para mostrar.</div>
+      <div class="alert alert-info mb-0">No hay artículos deportivos para mostrar.</div>
     </div>
   {% endfor %}
 </div>

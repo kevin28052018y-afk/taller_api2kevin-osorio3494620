@@ -10,7 +10,8 @@ from django.views.decorators.http import require_POST
 
 ROLES = {"usuario": "Usuario", "administrador": "Administrador"}
 
-TIMEOUT = 8  # segundos de espera máxima por la API
+# En el plan gratis de Render la API se duerme y tarda ~50 s en despertar
+TIMEOUT = 60  # segundos de espera máxima por la API
 
 
 def llamar_api(metodo, ruta, token=None, **kwargs):
@@ -27,7 +28,13 @@ def detalle_error(respuesta, por_defecto):
         detalle = respuesta.json().get("detail")
     except ValueError:
         return por_defecto
-    return detalle if isinstance(detalle, str) else por_defecto
+    if isinstance(detalle, str):
+        return detalle
+    if isinstance(detalle, list) and detalle:  # errores de validación (422)
+        mensajes = [d.get("msg", "") for d in detalle if isinstance(d, dict)]
+        texto = "; ".join(m for m in mensajes if m)
+        return texto or por_defecto
+    return por_defecto
 
 
 def login_requerido(vista):

@@ -1,12 +1,31 @@
 {% extends "store/base.html" %}
-{% block title %}Iniciar sesión · Mi Tienda{% endblock %}
+{% block title %}Iniciar sesión · Sport Zone{% endblock %}
 {% block content %}
+
+<style>
+  .login-card { border: 0; border-top: 5px solid var(--sport-green); overflow: hidden; }
+  .login-header {
+    background: linear-gradient(135deg, var(--sport-navy) 0%, var(--sport-green-dark) 100%);
+    color: #fff;
+    border-bottom: 4px solid var(--sport-orange);
+  }
+  .login-header p { color: rgba(255,255,255,.8); }
+  .form-control:focus {
+    border-color: var(--sport-green);
+    box-shadow: 0 0 0 .2rem rgba(0,196,106,.25);
+  }
+  .login-link { color: var(--sport-green-dark); font-weight: 600; }
+  .login-link:hover { color: var(--sport-orange); }
+</style>
+
 <div class="row justify-content-center">
   <div class="col-md-5 col-lg-4">
-    <div class="card shadow-sm">
+    <div class="card login-card shadow-sm">
+      <div class="login-header p-4">
+        <h3 class="mb-1">⚽ Entra a la cancha</h3>
+        <p class="mb-0">Inicia sesión para hacer tus pedidos.</p>
+      </div>
       <div class="card-body p-4">
-        <h3 class="mb-1">Iniciar sesión</h3>
-        <p class="text-muted">Entra para hacer tus pedidos.</p>
         <form method="post" novalidate>
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ next }}">
@@ -20,7 +39,7 @@
           </div>
           <button class="btn btn-primary w-100" type="submit">Entrar</button>
         </form>
-        <p class="text-center mt-3 mb-0 small">¿No tienes cuenta? <a href="{% url 'registro' %}">Regístrate</a></p>
+        <p class="text-center mt-3 mb-0 small">¿Aún no eres parte del equipo? <a class="login-link" href="{% url 'registro' %}">Regístrate</a></p>
       </div>
     </div>
   </div>
