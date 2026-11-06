@@ -12,7 +12,7 @@ class ProductoBase(BaseModel):
     stock: int = Field(default=0, ge=0, example=10)
     categoria: Optional[str] = Field(default=None, example="Tecnología")
     activo: bool = Field(default=True)
-
+    imagen_url: Optional[str] = Field(default=None, example="https://i.ibb.co/xxxx/laptop.jpg")
 
 class ProductoCreate(ProductoBase):
     pass
@@ -25,6 +25,7 @@ class ProductoUpdate(BaseModel):
     stock: Optional[int] = Field(default=None, ge=0)
     categoria: Optional[str] = None
     activo: Optional[bool] = None
+    imagen_url: Optional[str] = None
 
 
 class ProductoResponse(ProductoBase):

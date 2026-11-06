@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, EmailStr
 
 # Convierte el ObjectId nativo de Mongo a un str en las respuestas de la API
@@ -10,6 +10,7 @@ class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, example="juan_perez")
     email: EmailStr = Field(..., example="juan@example.com")
     full_name: Optional[str] = Field(None, example="Juan Pérez")
+    rol: Literal["usuario", "administrador"] = Field(default="usuario")
 
 
 class UserCreate(UserBase):
@@ -17,7 +18,7 @@ class UserCreate(UserBase):
     Esquema utilizado exclusivamente para el registro de nuevos usuarios.
     Exige la contraseña obligatoria con un mínimo de seguridad.
     """
-    password: str = Field(..., min_length=6, example="PasswordSeguro123!")
+    password: str = Field(..., min_length=6, max_length=72, example="PasswordSeguro123!")
 
 
 class UserResponse(UserBase):

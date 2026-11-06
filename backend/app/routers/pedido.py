@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo import ReturnDocument
 
+from app.core.security import get_current_user
 from app.db.mongodb import get_database
 from app.models.pedido import PedidoCreate, PedidoResponse
 
@@ -56,11 +57,11 @@ async def descontar_stock(db: AsyncIOMotorDatabase, items: list[dict]) -> Option
 
 @router.post("/", response_model=PedidoResponse, status_code=status.HTTP_201_CREATED)
 async def crear_pedido(
-    pedido: PedidoCreate, db: AsyncIOMotorDatabase = Depends(get_database)
+    pedido: PedidoCreate,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    usuario: dict = Depends(get_current_user),
 ):
-    """Crea un pedido: toma nombre y precio desde la BD y descuenta el stock."""
-    validar_object_id(pedido.usuario_id, "id de usuario")
-
+    """Crea un pedido del usuario del token: toma nombre y precio desde la BD y descuenta el stock."""
     items_guardados: list[dict] = []
     for item in pedido.items:
         oid = validar_object_id(item.producto_id, "id de producto")
@@ -88,7 +89,7 @@ async def crear_pedido(
         )
 
     data = {
-        "usuario_id": pedido.usuario_id,
+        "usuario_id": str(usuario["_id"]),
         "items": items_guardados,
         "total": round(sum(i["subtotal"] for i in items_guardados), 2),
         "activo": True,
@@ -104,6 +105,7 @@ async def listar_pedidos(
     activo: Optional[bool] = None,
     usuario_id: Optional[str] = None,
     db: AsyncIOMotorDatabase = Depends(get_database),
+    usuario: dict = Depends(get_current_user),
 ):
     """
     Lista los últimos 100 pedidos.
@@ -114,7 +116,10 @@ async def listar_pedidos(
     filtro: dict = {}
     if activo is not None:
         filtro["activo"] = activo
-    if usuario_id:
+    if usuario.get("rol") != "administrador":
+        # Un usuario normal solo ve sus propios pedidos
+        filtro["usuario_id"] = str(usuario["_id"])
+    elif usuario_id:
         filtro["usuario_id"] = usuario_id
     return await db["pedidos"].find(filtro).sort("created_at", -1).to_list(length=100)
 

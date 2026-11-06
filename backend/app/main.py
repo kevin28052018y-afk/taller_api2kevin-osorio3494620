@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.db import mongodb
-from app.routers import pedido, producto
+from app.routers import pedido, producto, usuarios
 
 # En producción reemplaza "*" por la URL de tu frontend, por ejemplo:
 # ["https://mi-frontend.onrender.com"]
@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Mi FastAPI Project",
     version="0.1.0",
-    description="API con CRUD de Productos y gestión de Pedidos",
+    description="API con Usuarios (JWT), CRUD de Productos y gestión de Pedidos",
     lifespan=lifespan,
 )
 
@@ -36,6 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(usuarios.router)
 app.include_router(producto.router)
 app.include_router(pedido.router)
 
