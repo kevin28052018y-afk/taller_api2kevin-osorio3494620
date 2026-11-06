@@ -89,7 +89,7 @@ STORAGES = {
 
 # --- Conexión con la API FastAPI y sesiones ---
 # En Render define API_URL con la URL de tu API, ej: https://mi-api.onrender.com
-API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000").rstrip("/")
+API_URL = os.environ.get("API_URL", "https://taller-api2kevin-osorio3494620-1.onrender.com").rstrip("/")
 
 # La sesión (donde se guarda el JWT) dura lo mismo que el token: 1 hora
 SESSION_COOKIE_AGE = 60 * 60
